@@ -15,21 +15,25 @@
     LayoutGrid,
     Pencil,
     Check,
-    X
+    X,
+    Settings
   } from 'lucide-svelte';
 
   import type { Transaction, Category } from './types.ts';
-  import { CategoryValues } from './types.ts';
+  import { DefaultCategories } from './types.ts';
   import { saveAppData, loadAppData } from './services/storageService';
   import TransactionForm from './components/TransactionForm.svelte';
   import StatsCard from './components/StatsCard.svelte';
   import PieChart from './components/PieChart.svelte';
   import BarChart from './components/BarChart.svelte';
+  import CategoryManager from './components/CategoryManager.svelte';
 
   // State
   let transactions = $state<Transaction[]>([]);
+  let categories = $state<string[]>([...DefaultCategories]);
   let initialBalance = $state(0);
   let isFormOpen = $state(false);
+  let isCategoryManagerOpen = $state(false);
   let filterCategory = $state<Category | 'All'>('All');
   let activeTab = $state<'list' | 'chart' | 'evolution'>('list');
   let isLoaded = $state(false);
@@ -46,6 +50,9 @@
       const data = await loadAppData();
       transactions = data.transactions;
       initialBalance = data.initialBalance;
+      if (data.categories && data.categories.length > 0) {
+        categories = data.categories;
+      }
       isLoaded = true;
     };
     initData();
@@ -54,7 +61,7 @@
   // Sauvegarder quand les données changent
   $effect(() => {
     if (isLoaded) {
-      saveAppData({ transactions, initialBalance });
+      saveAppData({ transactions, initialBalance, categories });
     }
   });
 
@@ -212,6 +219,10 @@
     }
   };
 
+  const handleSaveCategories = (newCategories: string[]) => {
+    categories = newCategories;
+  };
+
   const startEditingBalance = () => {
     tempBalanceValue = globalBalance.toString();
     isEditingBalance = true;
@@ -247,7 +258,7 @@
         <div class="flex items-center gap-3 self-start md:self-auto min-w-[200px]">
           {#if viewScope === 'month'}
             <button 
-              on:click={backToYearView}
+              onclick={backToYearView}
               class="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl flex items-center justify-center transition-colors"
               title="Retour à l'année"
             >
@@ -271,7 +282,7 @@
 
         <div class="flex items-center bg-slate-100 rounded-full p-1 shadow-inner">
            <button 
-             on:click={viewScope === 'year' ? goToPreviousYear : goToPreviousMonth} 
+             onclick={viewScope === 'year' ? goToPreviousYear : goToPreviousMonth} 
              class="p-2 hover:bg-white rounded-full transition-all text-slate-600 active:scale-95"
            >
              <ChevronLeft size={20} />
@@ -283,7 +294,7 @@
              }
            </div>
            <button 
-             on:click={viewScope === 'year' ? goToNextYear : goToNextMonth} 
+             onclick={viewScope === 'year' ? goToNextYear : goToNextMonth} 
              class="p-2 hover:bg-white rounded-full transition-all text-slate-600 active:scale-95"
            >
              <ChevronRight size={20} />
@@ -292,7 +303,14 @@
 
         <div class="flex gap-2 self-end md:self-auto min-w-[200px] justify-end">
            <button 
-            on:click={() => isFormOpen = true}
+            onclick={() => isCategoryManagerOpen = true}
+            class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2"
+            title="Gérer les catégories"
+          >
+            <Settings size={18} />
+          </button>
+           <button 
+            onclick={() => isFormOpen = true}
             class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all active:scale-95 flex items-center gap-2"
           >
             <span class="text-xl leading-none mb-0.5">+</span>
@@ -315,7 +333,7 @@
                   <p class="text-slate-300 font-medium mb-1">Solde Actuel (En Banque)</p>
                   {#if !isEditingBalance}
                     <button 
-                      on:click={startEditingBalance} 
+                      onclick={startEditingBalance} 
                       class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors"
                       title="Modifier le solde actuel"
                     >
@@ -323,8 +341,8 @@
                     </button>
                   {:else}
                     <div class="flex gap-2">
-                      <button on:click={saveBalance} class="p-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg"><Check size={14} /></button>
-                      <button on:click={() => isEditingBalance = false} class="p-1.5 bg-red-600 hover:bg-red-500 rounded-lg"><X size={14} /></button>
+                      <button onclick={saveBalance} class="p-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg"><Check size={14} /></button>
+                      <button onclick={() => isEditingBalance = false} class="p-1.5 bg-red-600 hover:bg-red-500 rounded-lg"><X size={14} /></button>
                     </div>
                   {/if}
                 </div>
@@ -395,7 +413,7 @@
                   {#each yearData.months as month}
                     {@const isCurrent = new Date().getMonth() === month.index && new Date().getFullYear() === currentDate.getFullYear()}
                     <tr 
-                      on:click={() => enterMonthDetail(month.index)}
+                      onclick={() => enterMonthDetail(month.index)}
                       class="group cursor-pointer transition-colors {isCurrent ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-slate-50'}"
                     >
                       <td class="px-6 py-4">
@@ -445,19 +463,19 @@
           <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
             <div class="flex bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
               <button 
-                on:click={() => activeTab = 'list'}
+                onclick={() => activeTab = 'list'}
                 class="flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 justify-center whitespace-nowrap {activeTab === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
               >
                 <ListIcon size={16} /> Opérations
               </button>
               <button 
-                on:click={() => activeTab = 'chart'}
+                onclick={() => activeTab = 'chart'}
                 class="flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 justify-center whitespace-nowrap {activeTab === 'chart' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
               >
                 <PieChartIcon size={16} /> Répartition
               </button>
               <button 
-                on:click={() => activeTab = 'evolution'}
+                onclick={() => activeTab = 'evolution'}
                 class="flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 justify-center whitespace-nowrap {activeTab === 'evolution' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
               >
                 <BarChart3 size={16} /> Historique
@@ -472,7 +490,7 @@
                   class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10 appearance-none cursor-pointer"
                 >
                   <option value="All">Toutes les catégories</option>
-                  {#each Object.values(CategoryValues) as c}
+                  {#each categories as c}
                     <option value={c}>{c}</option>
                   {/each}
                 </select>
@@ -504,7 +522,7 @@
                  <table class="w-full text-left border-collapse">
                   <thead class="bg-white text-slate-500 text-xs uppercase font-semibold tracking-wider border-b border-slate-100">
                     <tr>
-                      <th class="px-6 py-4">Jour</th>
+                      <th class="px-6 py-4">Date</th>
                       <th class="px-6 py-4">Description</th>
                       <th class="px-6 py-4">Catégorie</th>
                       <th class="px-6 py-4 text-right">Montant</th>
@@ -521,8 +539,8 @@
                     {:else}
                       {#each monthlyContext.filteredList as tx}
                         <tr class="hover:bg-slate-50 transition-colors group">
-                          <td class="px-6 py-4 text-sm text-slate-500">
-                            {new Date(tx.date).getDate()}
+                          <td class="px-6 py-4 text-sm text-slate-600">
+                            {new Date(tx.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </td>
                           <td class="px-6 py-4 font-medium text-slate-800">
                             {tx.description}
@@ -537,7 +555,7 @@
                           </td>
                           <td class="px-6 py-4 text-center">
                             <button 
-                              on:click={() => handleDeleteTransaction(tx.id)}
+                              onclick={() => handleDeleteTransaction(tx.id)}
                               class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                               title="Supprimer"
                             >
@@ -577,6 +595,15 @@
         onAdd={handleAddTransactions} 
         onClose={() => isFormOpen = false} 
         initialDate={currentDate}
+        categories={categories}
+      />
+    {/if}
+
+    {#if isCategoryManagerOpen}
+      <CategoryManager 
+        categories={categories}
+        onSave={handleSaveCategories}
+        onClose={() => isCategoryManagerOpen = false}
       />
     {/if}
 

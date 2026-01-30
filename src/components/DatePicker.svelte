@@ -112,7 +112,7 @@
   
   <button
     type="button"
-    on:click={() => isOpen = !isOpen}
+    onclick={() => isOpen = !isOpen}
     class="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all flex items-center gap-2 text-left"
   >
     <Calendar size={18} class="text-slate-400 flex-shrink-0" />
@@ -125,7 +125,7 @@
       <div class="flex items-center justify-between mb-4">
         <button
           type="button"
-          on:click={goToPreviousMonth}
+          onclick={goToPreviousMonth}
           class="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
         >
           <ChevronLeft size={20} />
@@ -137,7 +137,7 @@
         
         <button
           type="button"
-          on:click={goToNextMonth}
+          onclick={goToNextMonth}
           class="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
         >
           <ChevronRight size={20} />
@@ -146,7 +146,7 @@
 
       <button
         type="button"
-        on:click={selectToday}
+        onclick={selectToday}
         class="w-full mb-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
       >
         Aujourd'hui
@@ -169,7 +169,7 @@
             {@const today = isToday(day)}
             <button
               type="button"
-              on:click={() => selectDate(day)}
+              onclick={() => selectDate(day)}
               class="aspect-square rounded-lg text-sm font-medium transition-all {selected 
                 ? 'bg-slate-900 text-white shadow-md' 
                 : today
@@ -185,7 +185,7 @@
       <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2">
         <button
           type="button"
-          on:click={() => {
+          onclick={() => {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const formatted = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
@@ -199,14 +199,14 @@
         </button>
         <button
           type="button"
-          on:click={selectToday}
+          onclick={selectToday}
           class="text-xs py-2 px-3 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 font-medium transition-colors"
         >
           Aujourd'hui
         </button>
         <button
           type="button"
-          on:click={() => {
+          onclick={() => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const formatted = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;

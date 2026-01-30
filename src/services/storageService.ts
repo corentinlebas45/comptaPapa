@@ -21,10 +21,8 @@ export const saveAppData = async (data: AppData): Promise<void> => {
   try {
     const encoded = encodeToBase64(data);
     if (window.electronAPI) {
-      // Mode Desktop - données encodées en base64
       await window.electronAPI.saveData(encoded);
     } else {
-      // Mode Web - données encodées en base64
       localStorage.setItem(STORAGE_KEY, encoded);
     }
   } catch (e) {
@@ -37,10 +35,8 @@ export const loadAppData = async (): Promise<AppData> => {
     let encodedData: string | null = null;
     
     if (window.electronAPI) {
-      // Mode Desktop
       encodedData = await window.electronAPI.loadData();
     } else {
-      // Mode Web
       encodedData = localStorage.getItem(STORAGE_KEY);
     }
 
@@ -54,32 +50,33 @@ export const loadAppData = async (): Promise<AppData> => {
     if (decodedData) {
       return {
         transactions: decodedData.transactions || [],
-        initialBalance: decodedData.initialBalance || 0
+        initialBalance: decodedData.initialBalance || 0,
+        categories: decodedData.categories || []
       };
     }
 
-    // Tentative de rétro-compatibilité : si ce n'est pas du base64, essayer JSON direct
     try {
       const rawData = JSON.parse(encodedData);
       if (Array.isArray(rawData)) {
         return {
           transactions: rawData,
-          initialBalance: 0
+          initialBalance: 0,
+          categories: undefined
         };
       } else if (rawData && typeof rawData === 'object') {
         return {
           transactions: rawData.transactions || [],
-          initialBalance: rawData.initialBalance || 0
+          initialBalance: rawData.initialBalance || 0,
+          categories: rawData.categories
         };
       }
     } catch (e) {
-      // Ignore, ce n'est ni du base64 ni du JSON valide
     }
 
-    return { transactions: [], initialBalance: 0 };
+    return { transactions: [], initialBalance: 0, categories: undefined };
 
   } catch (e) {
     console.error("Failed to load app data", e);
-    return { transactions: [], initialBalance: 0 };
+    return { transactions: [], initialBalance: 0, categories: undefined };
   }
 };

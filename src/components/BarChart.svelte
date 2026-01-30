@@ -78,7 +78,7 @@
               font: {
                 size: 13,
                 family: "'Inter', sans-serif",
-                weight: '500'
+                weight: 500
               },
               usePointStyle: true,
               pointStyle: 'circle'

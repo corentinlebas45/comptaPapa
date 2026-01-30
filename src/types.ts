@@ -1,20 +1,18 @@
-// Types de base
 export type TransactionType = 'income' | 'expense';
 
-// Catégories disponibles
-export const CategoryValues = {
-  Food: 'Alimentation',
-  Housing: 'Logement',
-  Transport: 'Transport',
-  Utilities: 'Factures',
-  Health: 'Santé',
-  Leisure: 'Loisirs',
-  Other: 'Autre',
-  Salary: 'Salaire',
-  Investment: 'Investissement'
-} as const;
+export const DefaultCategories = [
+  'Alimentation',
+  'Logement',
+  'Transport',
+  'Factures',
+  'Santé',
+  'Loisirs',
+  'Autre',
+  'Salaire',
+  'Investissement'
+];
 
-export type Category = (typeof CategoryValues)[keyof typeof CategoryValues];
+export type Category = string;
 
 // Interfaces
 export interface Transaction {
@@ -29,6 +27,7 @@ export interface Transaction {
 export interface AppData {
   transactions: Transaction[];
   initialBalance: number;
+  categories?: string[];
 }
 
 export interface FinancialSummary {
