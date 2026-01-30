@@ -1,20 +1,41 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Compta
 
-# Run and deploy your AI Studio app
+Application de bureau simple pour gérer vos comptes personnels.
 
-This contains everything you need to run your app locally.
+## 🎯 Fonctionnalités
 
-View your app in AI Studio: https://ai.studio/apps/temp/1
+- Suivi des transactions (revenus et dépenses)
+- Visualisation par graphiques (camembert et barres)
+- Statistiques mensuelles et annuelles
+- Stockage local sécurisé
 
-## Run Locally
+## 🛠️ Technologies
 
-**Prerequisites:**  Node.js
+- **Electron** - Application de bureau
+- **Svelte** - Interface utilisateur
+- **Vite** - Build et développement
+- **Chart.js** - Graphiques
 
+## 🚀 Installation
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+# Installation des dépendances
+npm install
+
+# Lancement en développement
+npm run dev
+
+# Démarrage de l'application
+npm start
+```
+
+## 📦 Build
+
+```bash
+# Build pour Windows
+npm run dist:win
+```
+
+## 📝 Licence
+
+ISC
