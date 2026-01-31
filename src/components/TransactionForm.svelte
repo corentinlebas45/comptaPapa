@@ -1,13 +1,18 @@
 <script lang="ts">
     import { Plus, X, Repeat } from "lucide-svelte";
-    import type { Transaction, TransactionType, Category } from "../types.ts";
+    import type {
+        Transaction,
+        TransactionType,
+        Category,
+        CategoryDef,
+    } from "../types.ts";
     import DatePicker from "./DatePicker.svelte";
 
     interface Props {
         onAdd: (transactions: Omit<Transaction, "id">[]) => void;
         onClose: () => void;
         initialDate?: Date;
-        categories: string[];
+        categories: CategoryDef[];
     }
 
     let { onAdd, onClose, initialDate, categories }: Props = $props();
@@ -15,11 +20,13 @@
     let type = $state<TransactionType>("expense");
     let amount = $state("");
     let description = $state("");
-    let category = $state<Category>(categories[0] || "Autre");
+    let statementNumber = $state("");
+    let category = $state<Category>(categories[0]?.name || "Autre");
 
     let date = $state(
         (() => {
             const d = initialDate || new Date();
+
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, "0");
             const day = String(d.getDate()).padStart(2, "0");
@@ -60,6 +67,7 @@
                 date: formattedDate,
                 amount: parsedAmount,
                 description: finalDescription,
+                statementNumber,
                 category,
                 type,
             });
@@ -141,6 +149,20 @@
                 />
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">
+                    N° Relevé <span class="text-slate-400 font-normal"
+                        >(Optionnel)</span
+                    >
+                </label>
+                <input
+                    type="text"
+                    bind:value={statementNumber}
+                    class="w-1/3 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                    placeholder="Ex: 123"
+                />
+            </div>
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-600 mb-1"
@@ -151,7 +173,7 @@
                         class="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                     >
                         {#each categories as c}
-                            <option value={c}>{c}</option>
+                            <option value={c.name}>{c.name}</option>
                         {/each}
                     </select>
                 </div>

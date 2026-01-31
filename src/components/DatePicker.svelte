@@ -5,9 +5,10 @@
         value: string;
         onChange: (date: string) => void;
         label?: string;
+        variant?: "default" | "table";
     }
 
-    let { value, onChange, label }: Props = $props();
+    let { value, onChange, label, variant = "default" }: Props = $props();
 
     let isOpen = $state(false);
     let viewDate = $state(
@@ -117,6 +118,64 @@
         }),
     );
     const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+    const isTableVariant = $derived(variant === "table");
+    let triggerRef: HTMLButtonElement;
+    let popupPosition = $state({ top: 0, left: 0 });
+
+    const updatePosition = () => {
+        if (triggerRef) {
+            const rect = triggerRef.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const popupHeight = 350; // Approximative height including padding
+
+            const showAbove = spaceBelow < popupHeight && rect.top > spaceBelow;
+
+            let topPosition = 120;
+            let leftPosition = 0;
+
+            if (isTableVariant) {
+                leftPosition = rect.left - 320 - 30;
+                if (leftPosition < 20) leftPosition = 20; // Safety clamp
+
+                popupPosition = {
+                    top: window.innerHeight / 2 - 175, // Center vertical
+                    left: leftPosition,
+                };
+            } else {
+                leftPosition = rect.left + rect.width / 2 - 160;
+
+                if (showAbove) {
+                    topPosition = rect.top - 8 - popupHeight;
+                    if (topPosition < 0) topPosition = 8;
+                } else {
+                    topPosition = rect.bottom + 8;
+                }
+            }
+
+            popupPosition = {
+                top: topPosition,
+                left: leftPosition,
+            };
+        }
+    };
+
+    $effect(() => {
+        if (isOpen) {
+            // Initial position
+            updatePosition();
+
+            // Re-calculate on scroll or resize
+            window.addEventListener("scroll", updatePosition, true);
+            window.addEventListener("resize", updatePosition);
+
+            return () => {
+                window.removeEventListener("scroll", updatePosition, true);
+                window.removeEventListener("resize", updatePosition);
+            };
+        }
+    });
 </script>
 
 <div class="relative" bind:this={containerRef}>
@@ -128,18 +187,27 @@
 
     <button
         type="button"
+        bind:this={triggerRef}
         onclick={() => (isOpen = !isOpen)}
-        class="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all flex items-center gap-2 text-left"
+        class="w-full text-left outline-none transition-all flex items-center gap-2 {isTableVariant
+            ? 'px-2 py-1.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20 text-sm'
+            : 'px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}"
     >
-        <Calendar size={18} class="text-slate-400 flex-shrink-0" />
-        <span class="text-slate-700 flex-1 font-medium"
+        {#if !isTableVariant}
+            <Calendar size={18} class="text-slate-400 flex-shrink-0" />
+        {/if}
+        <span
+            class={isTableVariant
+                ? "text-slate-700"
+                : "text-slate-700 flex-1 font-medium"}
             >{formatDisplayDate(value)}</span
         >
     </button>
 
     {#if isOpen}
         <div
-            class="absolute z-[9999] bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl border border-slate-200 p-4 w-[320px] animate-in fade-in zoom-in duration-150"
+            class="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-slate-200 p-4 w-[320px] animate-in fade-in zoom-in duration-150"
+            style="top: {popupPosition.top}px; left: {popupPosition.left}px;"
         >
             <div class="flex items-center justify-between mb-4">
                 <button

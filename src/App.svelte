@@ -19,10 +19,11 @@
         Settings,
     } from "lucide-svelte";
 
-    import type { Transaction, Category } from "./types.ts";
+    import type { Transaction, Category, CategoryDef } from "./types.ts";
     import { DefaultCategories } from "./types.ts";
     import { saveAppData, loadAppData } from "./services/storageService";
     import TransactionForm from "./components/TransactionForm.svelte";
+    import DatePicker from "./components/DatePicker.svelte";
     import StatsCard from "./components/StatsCard.svelte";
     import PieChart from "./components/PieChart.svelte";
     import BarChart from "./components/BarChart.svelte";
@@ -30,7 +31,7 @@
 
     // State
     let transactions = $state<Transaction[]>([]);
-    let categories = $state<string[]>([...DefaultCategories]);
+    let categories = $state<CategoryDef[]>([...DefaultCategories]);
     let initialBalance = $state(0);
     let isFormOpen = $state(false);
     let isCategoryManagerOpen = $state(false);
@@ -44,6 +45,30 @@
     let viewScope = $state<"year" | "month">("year");
     let currentDate = $state(new Date());
 
+    let fastAdd = $state<{
+        date: string;
+        description: string;
+        category: string;
+        amount: string;
+        type: "income" | "expense";
+        statementNumber: string;
+    }>({
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+        category: "Alimentation",
+        amount: "",
+        type: "expense",
+        statementNumber: "",
+    });
+
+    // Make sure fastAdd date follows the view navigation
+    $effect(() => {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+        // Default to 1st of the viewed month
+        fastAdd.date = `${year}-${month}-01`;
+    });
+
     // Charger les données au montage
     $effect(() => {
         const initData = async () => {
@@ -51,7 +76,8 @@
             transactions = data.transactions;
             initialBalance = data.initialBalance;
             if (data.categories && data.categories.length > 0) {
-                categories = data.categories;
+                // Ensure loaded categories are compatible (storageService handles migration but ensuring type safety)
+                categories = data.categories as CategoryDef[];
             }
             isLoaded = true;
         };
@@ -93,6 +119,10 @@
             currentDate.getMonth() + 1,
             1,
         );
+    };
+
+    const getCategoryColor = (name: string) => {
+        return categories.find((c) => c.name === name)?.color || "#64748b";
     };
 
     const enterMonthDetail = (monthIndex: number) => {
@@ -273,7 +303,33 @@
         }
     };
 
-    const handleSaveCategories = (newCategories: string[]) => {
+    const handleFastAdd = () => {
+        if (!fastAdd.amount || !fastAdd.description) return;
+
+        handleAddTransactions([
+            {
+                date: fastAdd.date,
+                description: fastAdd.description,
+                category: fastAdd.category,
+                amount: parseFloat(fastAdd.amount.replace(",", ".")),
+                type: fastAdd.type,
+                statementNumber: fastAdd.statementNumber,
+            },
+        ]);
+
+        // Reset fields but keep date and category for convenience?
+        // User said "quick", usually keeping date is good.
+        fastAdd = {
+            date: fastAdd.date,
+            description: "",
+            category: "Alimentation",
+            amount: "",
+            type: "expense",
+            statementNumber: "",
+        };
+    };
+
+    const handleSaveCategories = (newCategories: CategoryDef[]) => {
         categories = newCategories;
     };
 
@@ -804,6 +860,9 @@
                                                 >Montant</th
                                             >
                                             <th class="px-6 py-4 text-center"
+                                                >N° Relevé</th
+                                            >
+                                            <th class="px-6 py-4 text-center"
                                                 >Action</th
                                             >
                                         </tr>
@@ -827,44 +886,115 @@
                                                     <td
                                                         class="px-6 py-4 text-sm text-slate-600"
                                                     >
-                                                        {new Date(
-                                                            tx.date,
-                                                        ).toLocaleDateString(
-                                                            "fr-FR",
-                                                            {
-                                                                day: "2-digit",
-                                                                month: "2-digit",
-                                                                year: "numeric",
-                                                            },
-                                                        )}
+                                                        <div class="w-32">
+                                                            <DatePicker
+                                                                value={tx.date}
+                                                                onChange={(
+                                                                    newDate,
+                                                                ) =>
+                                                                    (tx.date =
+                                                                        newDate)}
+                                                                variant="table"
+                                                            />
+                                                        </div>
                                                     </td>
                                                     <td
                                                         class="px-6 py-4 font-medium text-slate-800"
                                                     >
-                                                        {tx.description}
+                                                        <input
+                                                            type="text"
+                                                            bind:value={
+                                                                tx.description
+                                                            }
+                                                            class="bg-slate-50 border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-full font-medium transition-all"
+                                                        />
                                                     </td>
                                                     <td class="px-6 py-4">
-                                                        <span
-                                                            class="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200"
+                                                        <div
+                                                            class="relative w-fit group/cat"
                                                         >
-                                                            {tx.category}
-                                                        </span>
+                                                            <span
+                                                                class="px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-2 w-fit transition-all"
+                                                                style="background-color: {getCategoryColor(
+                                                                    tx.category,
+                                                                )}20; color: {getCategoryColor(
+                                                                    tx.category,
+                                                                )}; border-color: {getCategoryColor(
+                                                                    tx.category,
+                                                                )}40"
+                                                            >
+                                                                <div
+                                                                    class="w-1.5 h-1.5 rounded-full"
+                                                                    style="background-color: {getCategoryColor(
+                                                                        tx.category,
+                                                                    )}"
+                                                                ></div>
+                                                                {tx.category}
+                                                            </span>
+                                                            <select
+                                                                bind:value={
+                                                                    tx.category
+                                                                }
+                                                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-sm"
+                                                                title="Modifier la catégorie"
+                                                            >
+                                                                {#each categories as c}
+                                                                    <option
+                                                                        value={c.name}
+                                                                        >{c.name}</option
+                                                                    >
+                                                                {/each}
+                                                            </select>
+                                                            <!-- Edit hint icon on hover -->
+                                                            <div
+                                                                class="absolute -right-5 top-1/2 -translate-y-1/2 opacity-0 group-hover/cat:opacity-100 transition-opacity pointer-events-none text-slate-400"
+                                                            >
+                                                                <Pencil
+                                                                    size={12}
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                     <td
                                                         class="px-6 py-4 text-right font-bold tabular-nums {tx.type ===
                                                         'income'
                                                             ? 'text-emerald-600'
-                                                            : 'text-slate-800'}"
+                                                            : 'text-red-600'}"
                                                     >
-                                                        {tx.type === "income"
-                                                            ? "+"
-                                                            : "-"}
-                                                        {tx.amount.toLocaleString(
-                                                            "fr-FR",
-                                                            {
-                                                                minimumFractionDigits: 2,
-                                                            },
-                                                        )} €
+                                                        <div
+                                                            class="flex items-center justify-end gap-1"
+                                                        >
+                                                            <span
+                                                                >{tx.type ===
+                                                                "income"
+                                                                    ? "+"
+                                                                    : "-"}</span
+                                                            >
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                bind:value={
+                                                                    tx.amount
+                                                                }
+                                                                class="bg-slate-50 border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-24 text-right font-bold transition-all {tx.type ===
+                                                                'income'
+                                                                    ? 'text-emerald-600'
+                                                                    : 'text-red-600'}"
+                                                            />
+                                                            <span>€</span>
+                                                        </div>
+                                                    </td>
+                                                    <td
+                                                        class="px-6 py-4 text-center"
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            bind:value={
+                                                                tx.statementNumber
+                                                            }
+                                                            class="bg-slate-50 border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-full text-center text-xs text-slate-500 font-mono transition-all placeholder-slate-300"
+                                                            placeholder="-"
+                                                        />
                                                     </td>
                                                     <td
                                                         class="px-6 py-4 text-center"
@@ -874,7 +1004,7 @@
                                                                 handleDeleteTransaction(
                                                                     tx.id,
                                                                 )}
-                                                            class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                                             title="Supprimer"
                                                         >
                                                             <Trash2 size={16} />
@@ -883,6 +1013,116 @@
                                                 </tr>
                                             {/each}
                                         {/if}
+                                        <!-- Fast Add Row -->
+                                        <tr
+                                            class="bg-blue-50/30 hover:bg-blue-50 transition-colors border-t-2 border-slate-100"
+                                        >
+                                            <td
+                                                class="px-6 py-4 text-sm text-slate-600"
+                                            >
+                                                <div class="w-32">
+                                                    <DatePicker
+                                                        value={fastAdd.date}
+                                                        onChange={(newDate) =>
+                                                            (fastAdd.date =
+                                                                newDate)}
+                                                        variant="table"
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td
+                                                class="px-6 py-4 font-medium text-slate-800"
+                                            >
+                                                <input
+                                                    type="text"
+                                                    placeholder="Description..."
+                                                    bind:value={
+                                                        fastAdd.description
+                                                    }
+                                                    class="bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-full font-medium transition-all"
+                                                    onkeydown={(e) =>
+                                                        e.key === "Enter" &&
+                                                        handleFastAdd()}
+                                                />
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <select
+                                                    bind:value={
+                                                        fastAdd.category
+                                                    }
+                                                    class="bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-full text-xs font-medium text-slate-600 cursor-pointer outline-none transition-all"
+                                                >
+                                                    {#each categories as c}
+                                                        <option value={c.name}
+                                                            >{c.name}</option
+                                                        >
+                                                    {/each}
+                                                </select>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <div
+                                                    class="flex items-center justify-end gap-1"
+                                                >
+                                                    <button
+                                                        onclick={() =>
+                                                            (fastAdd.type =
+                                                                fastAdd.type ===
+                                                                "income"
+                                                                    ? "expense"
+                                                                    : "income")}
+                                                        class="font-bold w-4 text-center hover:bg-slate-200 rounded {fastAdd.type ===
+                                                        'income'
+                                                            ? 'text-emerald-600'
+                                                            : 'text-red-600'}"
+                                                    >
+                                                        {fastAdd.type ===
+                                                        "income"
+                                                            ? "+"
+                                                            : "-"}
+                                                    </button>
+                                                    <input
+                                                        type="text"
+                                                        inputmode="decimal"
+                                                        placeholder="0.00"
+                                                        bind:value={
+                                                            fastAdd.amount
+                                                        }
+                                                        class="bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-24 text-right font-bold transition-all {fastAdd.type ===
+                                                        'income'
+                                                            ? 'text-emerald-600'
+                                                            : 'text-red-600'}"
+                                                        onkeydown={(e) =>
+                                                            e.key === "Enter" &&
+                                                            handleFastAdd()}
+                                                    />
+                                                    <span>€</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <input
+                                                    type="text"
+                                                    bind:value={
+                                                        fastAdd.statementNumber
+                                                    }
+                                                    class="bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1 w-full text-center text-xs text-slate-500 font-mono transition-all placeholder-slate-300"
+                                                    placeholder="-"
+                                                    onkeydown={(e) =>
+                                                        e.key === "Enter" &&
+                                                        handleFastAdd()}
+                                                />
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <button
+                                                    onclick={handleFastAdd}
+                                                    class="p-2 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                    title="Ajouter"
+                                                    disabled={!fastAdd.amount ||
+                                                        !fastAdd.description}
+                                                >
+                                                    <Check size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
